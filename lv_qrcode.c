@@ -71,7 +71,7 @@ lv_obj_t * lv_qrcode_create(lv_obj_t * parent, lv_coord_t size, lv_color_t dark_
  * @param data_len length of data in bytes
  * @return LV_RES_OK: if no error; LV_RES_INV: on error
  */
-lv_res_t lv_qrcode_update(lv_obj_t * qrcode, const void * data, uint32_t data_len)
+lv_res_t lv_qrcode_update(lv_obj_t * qrcode, const char * data)
 {
     lv_color_t c;
     c.full = 1;
@@ -81,18 +81,21 @@ lv_res_t lv_qrcode_update(lv_obj_t * qrcode, const void * data, uint32_t data_le
     lv_canvas_fill_bg(qrcode, c);
 #endif
 
-    if(data_len > qrcodegen_BUFFER_LEN_MAX) return LV_RES_INV;
+    /* if(data_len > qrcodegen_BUFFER_LEN_MAX) return LV_RES_INV; */
 
-    uint8_t qr0[qrcodegen_BUFFER_LEN_MAX];
-    uint8_t data_tmp[qrcodegen_BUFFER_LEN_MAX];
-    memcpy(data_tmp, data, data_len);
+    uint8_t *qr0 = lv_mem_alloc(qrcodegen_BUFFER_LEN_MAX);
+    uint8_t *data_tmp = lv_mem_alloc(qrcodegen_BUFFER_LEN_MAX);
 
-    bool ok = qrcodegen_encodeBinary(data_tmp, data_len,
+    bool ok = qrcodegen_encodeText(data, data_tmp,
             qr0, qrcodegen_Ecc_MEDIUM,
             qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX,
             qrcodegen_Mask_AUTO, true);
 
-    if (!ok) return LV_RES_INV;
+    if (!ok) {
+        lv_mem_free(data_tmp);
+        lv_mem_free(qr0);
+        return LV_RES_INV;
+    }
 
 
     lv_coord_t obj_w = lv_obj_get_width(qrcode);
@@ -149,6 +152,9 @@ lv_res_t lv_qrcode_update(lv_obj_t * qrcode, const void * data, uint32_t data_le
           memcpy((uint8_t*)buf_u8 + row_byte_cnt * (y + s), row_ori, row_byte_cnt);
       }
     }
+
+    lv_mem_free(data_tmp);
+    lv_mem_free(qr0);
 
     return LV_RES_OK;
 }
